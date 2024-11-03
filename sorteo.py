@@ -4,6 +4,7 @@ import random
 from discord.ext import commands
 import json
 import os
+from dotenv import load_dotenv
 
 # Definir los intents necesarios
 intents = discord.Intents.default()
@@ -17,6 +18,12 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Ruta del archivo JSON para almacenar participaciones
 participaciones_file = 'participaciones.json'
+
+# Cargar las variables de entorno desde el archivo .env
+load_dotenv()
+
+# Obtener el token de la variable de entorno
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 # Cargar participaciones desde un archivo JSON, si existe
 if os.path.exists(participaciones_file):
@@ -340,4 +347,4 @@ async def on_command_error(ctx, error):
         if ctx.invoked_with == "participar":
             await send_error_message(ctx, f"Ocurrió un error inesperado: {str(e)}")
             
-bot.run('MTMwMTgxOTAyNTY5Njc1MTY0Nw.G0x331.pshTfhCfdHE-wwqZ1ag3HOz3zJeJ641uTHVLIE')
+bot.run(TOKEN)
