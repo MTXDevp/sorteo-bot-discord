@@ -19,10 +19,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # Ruta del archivo JSON para almacenar participaciones
 participaciones_file = 'participaciones.json'
 
-# Cargar las variables de entorno desde el archivo .env
-load_dotenv()
-
-# Obtener el token de la variable de entorno
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 # Cargar participaciones desde un archivo JSON, si existe
