@@ -1,0 +1,1 @@
+worker: sorteo.py
