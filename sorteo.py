@@ -489,5 +489,4 @@ async def on_command_error(ctx, error):
                                      f"Ocurrió un error inesperado: {str(e)}")
 
 
-bot.run(
-    'MTMwMTgxOTAyNTY5Njc1MTY0Nw.GdgUMR._xxy2KU1Y9M9E1WWv6RkXNNo477wpeutqEDoqo')
+bot.run()
