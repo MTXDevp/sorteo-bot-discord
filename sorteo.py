@@ -83,7 +83,7 @@ async def participar(ctx,
             json.dump(participaciones, f)
 
         await ctx.send(
-            f"{display_name} se ha inscrito con {num_participaciones} participaciones. ¡Buena suerte!"
+            f"**{display_name}** se ha inscrito con {num_participaciones} participaciones. ¡Buena suerte!"
         )
 
     except Exception as e:
@@ -151,7 +151,7 @@ async def eliminar(ctx,
             json.dump(participaciones, f)
 
         await ctx.send(
-            f"{display_name} ha eliminado {num_participaciones} participaciones."
+            f"**{display_name}** ha eliminado {num_participaciones} participaciones."
         )
 
     except Exception as e:
@@ -177,7 +177,7 @@ async def sorteo(ctx):
         # Obtener los miembros en el canal de voz especificado
         miembros_canal = canal_voz.members
         print(
-            f"Miembros en el canal: {[miembro.display_name for miembro in miembros_canal]}"
+            f"Miembros en el canal: {[miembro.nick if miembro.nick else miembro.display_name for miembro in miembros_canal]}"
         )  # Depuración
 
         if not miembros_canal:
@@ -188,17 +188,19 @@ async def sorteo(ctx):
 
         # Crear un diccionario de participantes que están en el canal de voz
         lista_filtrada = {}
+        total_participaciones = 0
         for miembro in miembros_canal:
             if str(
                     miembro.id
             ) in participaciones:  # Verificar si el ID está en participaciones
-                lista_filtrada[str(miembro.id)] = participaciones[str(
-                    miembro.id)]
+                num_participaciones = participaciones[str(miembro.id)]
+                lista_filtrada[str(miembro.id)] = num_participaciones
+                total_participaciones += num_participaciones
 
         if not lista_filtrada:  # Verificar si la lista filtrada está vacía
             await send_error_message(
                 ctx,
-                "No hay participantes en el sorteo que estén en el canal de voz."
+                "No hay participantes del sorteo que estén en el canal de voz."
             )
             return
 
@@ -207,14 +209,14 @@ async def sorteo(ctx):
             "🎉 ¡Comenzando el sorteo! 🎉\n🌀 Preparándose para girar la ruleta..."
         )
 
-        # Simulación de la ruleta mostrando nombres
+        # Simulación de la ruleta mostrando nombres con porcentajes
         for _ in range(5):  # Girar 5 veces
             nombre_actual = random.choice(list(lista_filtrada.keys()))
-            usuario_actual = await bot.fetch_user(int(nombre_actual)
-                                                  )  # Convierte a int
-            nombre_resaltado = f"**{usuario_actual.display_name}**"
+            # Obtener el miembro correspondiente al ID
+            usuario_actual = ctx.guild.get_member(int(nombre_actual))
+            nombre_resaltado = f"**{usuario_actual.nick if usuario_actual.nick else usuario_actual.display_name}**"
             nombres_listados = "\n".join([
-                f"• {(await bot.fetch_user(int(uid))).display_name}: {num_participaciones}"
+                f"• {ctx.guild.get_member(int(uid)).nick if ctx.guild.get_member(int(uid)).nick else ctx.guild.get_member(int(uid)).display_name}: {num_participaciones} participaciones ({(num_participaciones / total_participaciones) * 100:.2f}%)"
                 for uid, num_participaciones in lista_filtrada.items()
             ])
             mensaje_final = f"🎉 ¡Comenzando el sorteo! 🎉\n{nombres_listados}\n\n 🌀¡Girando! {nombre_resaltado}!"
@@ -224,12 +226,12 @@ async def sorteo(ctx):
         # Elegir un ganador al azar de la lista filtrada
         ganador_id = random.choice(list(
             lista_filtrada.keys()))  # Se obtiene como str
-        ganador = await bot.fetch_user(int(ganador_id)
-                                       )  # Convierte a int al buscar
+        ganador = ctx.guild.get_member(int(ganador_id))
 
         # Anunciar el ganador
         await mensaje.edit(
-            content=f"🎉 ¡El ganador del sorteo es **{ganador.display_name}**! 🎉"
+            content=
+            f"🎉 ¡El ganador del sorteo es **{ganador.nick if ganador.nick else ganador.display_name}**! 🎉"
         )
 
         # Eliminar al ganador de participaciones
@@ -237,16 +239,16 @@ async def sorteo(ctx):
             del participaciones[
                 ganador_id]  # Eliminar al ganador de la lista de participaciones
             await ctx.send(
-                f"🗑️ Se ha eliminado al usuario **{ganador.display_name}** de la lista ponderada."
+                f"🗑️ Se ha eliminado al usuario **{ganador.nick if ganador.nick else ganador.display_name}** de la lista de participantes."
             )
             save_participaciones(
                 participaciones)  # Guardar cambios en el archivo JSON
 
         # Mostrar la lista ponderada tras la eliminación con el número de participaciones
         lista_mostrar = "\n".join([
-            f"• {(await bot.fetch_user(int(uid))).display_name}: {num_participaciones}"
+            f"**{ctx.guild.get_member(int(uid)).nick if ctx.guild.get_member(int(uid)).nick else ctx.guild.get_member(int(uid)).display_name}**: {num_participaciones} participaciones"
             for uid, num_participaciones in participaciones.items()
-        ]) or "No quedan participantes."
+        ]) or "**No quedan participantes.**"
 
         await ctx.send(f"📋 Participaciones actualizadas:\n{lista_mostrar}")
 
@@ -265,6 +267,16 @@ def save_participaciones(participaciones):
                       indent=4)  # Indentado para mejor legibilidad
     except Exception as e:
         print(f"Error al guardar las participaciones: {str(e)}")
+
+
+@bot.command(name="unirse")
+async def unirse(ctx):
+    canal = discord.utils.get(ctx.guild.voice_channels, name="Sorteo")
+    if canal is not None:
+        await canal.connect()
+        await ctx.send(f"🤖 Me he unido al canal de voz '{canal.name}'.")
+    else:
+        await ctx.send("❌ No se encontró el canal de voz.")
 
 
 # Comando para eliminar todas las participaciones, solo para administradores
@@ -307,10 +319,21 @@ async def participantes(ctx):
             return
 
         # Crear un mensaje que contenga la lista de participantes y sus participaciones
-        mensaje = "📋 **Participantes en el sorteo:**\n\n"  # Añadido un salto de línea adicional
+        mensaje = "📋 Participantes en el sorteo:\n"  # Añadido un salto de línea adicional
         for usuario_id, num_participaciones in participaciones.items():
-            usuario = await bot.fetch_user(usuario_id)
-            mensaje += f"• **{usuario.display_name}**: {num_participaciones} participaciones\n"  # Usar display_name en negrita con un icono de lista
+            # Obtener el miembro correspondiente al ID
+            usuario = ctx.guild.get_member(
+                int(usuario_id))  # Asegurarse de convertir a int
+            if usuario:  # Asegurarse de que el usuario es un miembro del servidor
+                mensaje += f"• **{usuario.nick if usuario.nick else usuario.display_name}**: {num_participaciones} participaciones\n"  # Usar nick en negrita
+            # Si quieres evitar mostrar usuarios no miembros, omite la línea siguiente:
+            # else:
+            #     mensaje += f"• **{usuario_id} (no en el servidor)**: {num_participaciones} participaciones\n"
+
+        if mensaje == "📋 Participantes en el sorteo:\n":  # Si no hay usuarios válidos
+            await send_error_message(ctx,
+                                     "No hay participantes en el servidor.")
+            return
 
         await ctx.send(mensaje)
 
@@ -393,8 +416,17 @@ async def sumar_participaciones_voz(ctx):
             )
             return
 
+        # Obtener miembros en el canal de voz
+        miembros_canal = canal_eventos.members
+
+        if not miembros_canal:  # Si no hay miembros en el canal
+            await ctx.send(
+                f"❌ No hay usuarios en el canal de voz '{canal_eventos.name}'."
+            )
+            return
+
         # Iterar sobre los miembros en el canal de voz
-        for member in canal_eventos.members:
+        for member in miembros_canal:
             if not member.bot:  # Ignorar los bots
                 usuario_id = str(member.id)
                 # Sumar 1 participación
@@ -434,4 +466,4 @@ async def on_command_error(ctx, error):
                                      f"Ocurrió un error inesperado: {str(e)}")
 
 
-bot.run()
+bot.run('')
