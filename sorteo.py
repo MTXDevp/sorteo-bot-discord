@@ -4,6 +4,10 @@ import random
 from discord.ext import commands
 import json
 import os
+import unicodedata
+from fuzzywuzzy import fuzz
+
+
 #from dotenv import load_dotenv
 
 # Definir los intents necesarios
@@ -35,61 +39,57 @@ async def send_error_message(ctx, message):
 
 
 # Comando para que los administradores inscriban a un usuario en el sorteo
+# Comando para que los administradores inscriban a un usuario en el sorteo
 @bot.command(name="registrar")
-@commands.has_permissions(administrator=True)  # Solo permite a administradores
-async def participar(ctx,
-                     display_name: str = None,
-                     num_participaciones: int = None):
+@commands.has_permissions(administrator=True)
+async def participar(ctx, display_name: str = None, num_participaciones: int = None):
     if display_name is None:
-        await send_error_message(ctx,
-                                 "Faltó introducir el nombre del usuario.")
+        await send_error_message(ctx, "Faltó introducir el nombre del usuario.")
         return
     if num_participaciones is None:
-        await send_error_message(
-            ctx,
-            "Faltan las participaciones. Por favor, proporciona el número de participaciones."
-        )
+        await send_error_message(ctx, "Faltan las participaciones. Por favor, proporciona el número de participaciones.")
         return
 
     try:
         usuario = None
+        display_name_normalizado = display_name.strip()  # No modificarlo más
+        print(f"Nombre normalizado: '{display_name_normalizado}'")  # Log para ver el nombre normalizado
 
-        # Buscar al usuario por display_name en el servidor (sin importar mayúsculas)
+        # Crear una lista con los nombres de los miembros
+        nombres_miembros = [member.display_name for member in ctx.guild.members]
+        print("Nombres de miembros:", nombres_miembros)  # Log de todos los nombres de los miembros
+
+        # Buscar el usuario utilizando fuzzywuzzy
         for member in ctx.guild.members:
-            if member.display_name.lower() == display_name.lower(
-            ):  # Comparar sin importar mayúsculas
+            score = fuzz.ratio(display_name_normalizado, member.display_name)
+            print(f"Comparando con: '{member.display_name}' - Score: {score}")  # Log de comparación
+
+            if score >= 70:  # Umbral de similitud del 80%
                 usuario = str(member.id)
                 break
 
         if usuario is None:
-            await send_error_message(
-                ctx,
-                f"No se encontró un usuario con el nombre '{display_name}' en el servidor."
-            )
+            await send_error_message(ctx, f"No se encontró un usuario con el nombre '{display_name}' en el servidor.")
             return
 
         # Verificar si el número de participaciones es válido
         if num_participaciones <= 0:
-            await send_error_message(
-                ctx, "El número de participaciones debe ser mayor a 0.")
+            await send_error_message(ctx, "El número de participaciones debe ser mayor a 0.")
             return
 
         # Registrar o actualizar el número de participaciones del usuario
-        participaciones[usuario] = participaciones.get(usuario,
-                                                       0) + num_participaciones
+        participaciones[usuario] = participaciones.get(usuario, 0) + num_participaciones
 
         # Guardar participaciones en el archivo JSON
         with open(participaciones_file, 'w') as f:
             json.dump(participaciones, f)
 
-        await ctx.send(
-            f"**{display_name}** se ha inscrito con {num_participaciones} participaciones. ¡Buena suerte!"
-        )
+        await ctx.send(f"**{display_name}** se ha inscrito con {num_participaciones} participaciones. ¡Buena suerte!")
 
     except Exception as e:
+        print(f"Error: {str(e)}")  # Log de errores
         await send_error_message(ctx, f"Ocurrió un error inesperado: {str(e)}")
-
-
+        
 # Comando para eliminar participaciones, solo para administradores
 @bot.command(name="eliminar")
 @commands.has_permissions(administrator=True)  # Solo permite a administradores
@@ -445,6 +445,29 @@ async def sumar_participaciones_voz(ctx):
         await ctx.send(f"Ocurrió un error inesperado: {str(e)}")
 
 
+########################### UTILS ##################################
+
+
+def normalize_text(text):
+    print(f"Normalizando texto: {text}")
+    # Normaliza el texto eliminando acentos y convirtiendo a una forma compatible
+    normalized = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII').strip().lower()
+    print(f"Resultado normalizado: {normalized}")
+    return normalized
+
+# Evento de inicio del bot
+@bot.event
+async def on_ready():
+    print(f'Bot {bot.user.name} ha iniciado sesión y está listo.')
+    asyncio.create_task(simulate_activity())
+
+
+async def simulate_activity():
+    while True:
+        print("El bot está activo...")  # Esto genera una salida en el terminal
+        await asyncio.sleep(600)  # Espera 10 minuto
+
+
 # Evento para manejar errores en los comandos
 @bot.event
 async def on_command_error(ctx, error):
@@ -466,4 +489,5 @@ async def on_command_error(ctx, error):
                                      f"Ocurrió un error inesperado: {str(e)}")
 
 
-bot.run('')
+bot.run(
+    'MTMwMTgxOTAyNTY5Njc1MTY0Nw.GdgUMR._xxy2KU1Y9M9E1WWv6RkXNNo477wpeutqEDoqo')
