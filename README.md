@@ -1,5 +1,4 @@
 # sorteo-bot-discord
-servidor web: render
 
 !participar nombre participaciones
 !eliminar nombre participaciones
