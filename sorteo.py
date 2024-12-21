@@ -39,7 +39,6 @@ async def send_error_message(ctx, message):
 
 
 # Comando para que los administradores inscriban a un usuario en el sorteo
-# Comando para que los administradores inscriban a un usuario en el sorteo
 @bot.command(name="registrar")
 @commands.has_permissions(administrator=True)
 async def participar(ctx, display_name: str = None, num_participaciones: int = None):
@@ -172,7 +171,7 @@ async def sorteo(ctx):
                 ctx,
                 "❌ No se encontró un canal de voz llamado 'Sorteo' o 'sorteo'."
             )
-            return  # Salir si el canal no existe
+            return
 
         # Obtener los miembros en el canal de voz especificado
         miembros_canal = canal_voz.members
@@ -204,59 +203,50 @@ async def sorteo(ctx):
             )
             return
 
-        # Mensaje de inicio del sorteo
-        mensaje = await ctx.send(
-            "🎉 ¡Comenzando el sorteo! 🎉\n🌀 Preparándose para girar la ruleta..."
+        # Crear mensaje inicial con los participantes y sus probabilidades
+        nombres_listados = "\n".join([  
+            f"• **{ctx.guild.get_member(int(uid)).nick if ctx.guild.get_member(int(uid)).nick else ctx.guild.get_member(int(uid)).display_name}**: {num_participaciones} participaciones ({(num_participaciones / total_participaciones) * 100:.2f}%)"
+            for uid, num_participaciones in lista_filtrada.items()
+        ])
+
+        # Enviar el mensaje de inicio del sorteo con los saltos de línea
+        mensaje_participantes = await ctx.send(
+            f"🚨🚨 **¡Comenzando el sorteo!** 🚨🚨\n\n📋 Participantes y probabilidades:\n{nombres_listados}\n\n"
         )
 
-        # Simulación de la ruleta mostrando nombres con porcentajes
-        for _ in range(5):  # Girar 5 veces
-            nombre_actual = random.choice(list(lista_filtrada.keys()))
-            # Obtener el miembro correspondiente al ID
-            usuario_actual = ctx.guild.get_member(int(nombre_actual))
-            nombre_resaltado = f"**{usuario_actual.nick if usuario_actual.nick else usuario_actual.display_name}**"
-            nombres_listados = "\n".join([
-                f"• {ctx.guild.get_member(int(uid)).nick if ctx.guild.get_member(int(uid)).nick else ctx.guild.get_member(int(uid)).display_name}: {num_participaciones} participaciones ({(num_participaciones / total_participaciones) * 100:.2f}%)"
-                for uid, num_participaciones in lista_filtrada.items()
-            ])
-            mensaje_final = f"🎉 ¡Comenzando el sorteo! 🎉\n{nombres_listados}\n\n 🌀¡Girando! {nombre_resaltado}!"
-            await mensaje.edit(content=mensaje_final)
-            await asyncio.sleep(0.2)  # Espera un poco más entre nombres
+        # Simulación de la ruleta: muestra solo un mensaje "girando" y espera
+        nombre_actual = random.choice(list(lista_filtrada.keys()))
+        usuario_actual = ctx.guild.get_member(int(nombre_actual))
+        nombre_resaltado = f"**{usuario_actual.nick if usuario_actual.nick else usuario_actual.display_name}**"
+        mensaje_girando = await ctx.send(f"🌀¡Girando! {nombre_resaltado}!\n\n")
+
+        # Esperar un poco más de tiempo (1.5 segundos en vez de 1) para que los mensajes se procesen correctamente
+        await asyncio.sleep(1.5)
 
         # Elegir un ganador al azar de la lista filtrada
-        ganador_id = random.choice(list(
-            lista_filtrada.keys()))  # Se obtiene como str
+        ganador_id = random.choice(list(lista_filtrada.keys()))
         ganador = ctx.guild.get_member(int(ganador_id))
 
-        # Anunciar el ganador
-        await mensaje.edit(
-            content=
-            f"🎉 ¡El ganador del sorteo es **{ganador.nick if ganador.nick else ganador.display_name}**! 🎉"
+        # Eliminar el mensaje "girando" y anunciar el ganador en un nuevo mensaje
+        await mensaje_girando.delete()
+        await ctx.send(
+            f"\n🎉 ¡El ganador del sorteo es **{ganador.nick if ganador.nick else ganador.display_name}**! 🎉\n"
         )
 
         # Eliminar al ganador de participaciones
-        if ganador_id in participaciones:  # Aquí `ganador_id` es str
-            del participaciones[
-                ganador_id]  # Eliminar al ganador de la lista de participaciones
+        if ganador_id in participaciones:
+            del participaciones[ganador_id]
             await ctx.send(
-                f"🗑️ Se ha eliminado al usuario **{ganador.nick if ganador.nick else ganador.display_name}** de la lista de participantes."
+                f"\n🗑️ Se ha eliminado al usuario **{ganador.nick if ganador.nick else ganador.display_name}** de la lista de participantes.\n"
             )
-            save_participaciones(
-                participaciones)  # Guardar cambios en el archivo JSON
-
-        # Mostrar la lista ponderada tras la eliminación con el número de participaciones
-        lista_mostrar = "\n".join([
-            f"**{ctx.guild.get_member(int(uid)).nick if ctx.guild.get_member(int(uid)).nick else ctx.guild.get_member(int(uid)).display_name}**: {num_participaciones} participaciones"
-            for uid, num_participaciones in participaciones.items()
-        ]) or "**No quedan participantes.**"
-
-        await ctx.send(f"📋 Participaciones actualizadas:\n{lista_mostrar}")
+            save_participaciones(participaciones)
 
     except discord.HTTPException as e:
         await send_error_message(
             ctx, f"Ocurrió un error con la API de Discord: {str(e)}")
     except Exception as e:
         await send_error_message(ctx, f"Ocurrió un error inesperado: {str(e)}")
+
 
 
 # Guardar participaciones en un archivo JSON
@@ -309,7 +299,6 @@ async def mis_participaciones(ctx):
         await send_error_message(ctx, f"Ocurrió un error inesperado: {str(e)}")
 
 
-# Comando para listar todas las participaciones
 @bot.command(name="participantes")
 async def participantes(ctx):
     try:
@@ -318,21 +307,23 @@ async def participantes(ctx):
                 ctx, "No hay participantes registrados en el sorteo.")
             return
 
-        # Crear un mensaje que contenga la lista de participantes y sus participaciones
-        mensaje = "📋 Participantes en el sorteo:\n"  # Añadido un salto de línea adicional
-        for usuario_id, num_participaciones in participaciones.items():
+        # Crear un mensaje que contenga la lista de participantes y sus participaciones, ordenado alfabéticamente
+        mensaje = "📋 Participantes en el sorteo:\n"
+
+        # Ordenar los participantes alfabéticamente por el nombre del usuario
+        participantes_ordenados = sorted(
+            participaciones.items(),
+            key=lambda item: (ctx.guild.get_member(int(item[0])).display_name or ctx.guild.get_member(int(item[0])).nick)
+        )
+
+        for usuario_id, num_participaciones in participantes_ordenados:
             # Obtener el miembro correspondiente al ID
-            usuario = ctx.guild.get_member(
-                int(usuario_id))  # Asegurarse de convertir a int
+            usuario = ctx.guild.get_member(int(usuario_id))  # Convertir a int
             if usuario:  # Asegurarse de que el usuario es un miembro del servidor
-                mensaje += f"• **{usuario.nick if usuario.nick else usuario.display_name}**: {num_participaciones} participaciones\n"  # Usar nick en negrita
-            # Si quieres evitar mostrar usuarios no miembros, omite la línea siguiente:
-            # else:
-            #     mensaje += f"• **{usuario_id} (no en el servidor)**: {num_participaciones} participaciones\n"
+                mensaje += f"• **{usuario.nick if usuario.nick else usuario.display_name}**: {num_participaciones} participaciones\n"
 
         if mensaje == "📋 Participantes en el sorteo:\n":  # Si no hay usuarios válidos
-            await send_error_message(ctx,
-                                     "No hay participantes en el servidor.")
+            await send_error_message(ctx, "No hay participantes en el servidor.")
             return
 
         await ctx.send(mensaje)
