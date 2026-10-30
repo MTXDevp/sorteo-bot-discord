@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+pip-wheel-metadata/
+
+# Herramientas
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Proyecto
+.env
+data/*.db
+data/*.db-journal
+*.log
+
+# Discord / SO
+.DS_Store
+Thumbs.db
