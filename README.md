@@ -1,12 +1,3 @@
-# Sorteo Bot para Discord
-
-Empecé con un `sorteo.py` de 400 líneas todo mezclado y lo fui rompiendo en piezas
-hasta dejarlo en algo que se puede enseñar: sorteo ponderado de verdad, comandos
-slash + prefijo `!`, y SQLite en vez del JSON que se corrompía a la mínima.
-
-No es un framework ni pretende serlo, es el bot que uso en mi servidor para los
-sorteos y me sirve para practicar Python en serio (tipos, tests, CI).
-
 ## Qué hace
 
 - Sorteo con peso: quien tiene más participaciones tiene más probabilidad. Se ve
