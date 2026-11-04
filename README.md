@@ -17,7 +17,7 @@ cp .env.example .env   # pon ahí tu DISCORD_TOKEN
 python -m sorteo_bot
 ```
 
-Lo del token: https://discord.com/developers/applications, activas los intents
+token: https://discord.com/developers/applications, activas los intents
 de Members, Presence y Message Content, e invitas al bot con `bot` +
 `applications.commands`.
 
