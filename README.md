@@ -56,5 +56,3 @@ Cobertura mínima exigida: 80%. CI con GitHub Actions en Python 3.11 a 3.13.
 - Programación de sorteos y múltiples premios por noche.
 - Evaluación de Postgres cuando SQLite sea insuficiente.
 - Historial de ganadores para auditoría.
-
-Licencia: MIT.
