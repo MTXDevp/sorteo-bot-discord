@@ -1,69 +1,60 @@
-## Qué hace
+# Sorteo Bot
 
-- Sorteo con peso: quien tiene más participaciones tiene más probabilidad. Se ve
-  el porcentaje de cada uno antes de girar.
-- Comandos híbridos, valen con `/` y con `!`: `registrar`, `eliminar`, `generar`,
-  `sorteo`, `sorteo_eliminar`, `unirse`, `mis_participaciones`, `participantes`,
-  `miembros`, `usuarios_activos`.
-- Para apuntar acepta el nombre aproximado ("jose" encuentra a "José García").
-- Solo los admins tocan el saldo. El resto puede consultar y jugar.
-- Migra solo el `participaciones.json` viejo a SQLite la primera vez.
+Bot de Discord para sorteos ponderados por participaciones.
 
-## Ponerlo en marcha
+## Funcionalidades
 
-```bash
-pip install -e ".[dev]"
-cp .env.example .env   # pon ahí tu DISCORD_TOKEN
-python -m sorteo_bot
-```
+- Sorteo ponderado: la probabilidad es proporcional al número de participaciones. El porcentaje de cada participante se muestra antes del sorteo.
+- Comandos disponibles con prefijos `/` y `!`: `registrar`, `eliminar`, `generar`, `sorteo`, `sorteo_eliminar`, `unirse`, `mis_participaciones`, `participantes`, `miembros`, `usuarios_activos`.
+- Resolución de nombres por coincidencia aproximada. Ejemplo: "jose" resuelve a "José García".
+- Permisos: la gestión de saldo es solo para administradores. Consulta y participación, abiertas al resto.
+- Migración automática de `participaciones.json` a SQLite en el primer arranque.
 
-token: https://discord.com/developers/applications, activas los intents
-de Members, Presence y Message Content, e invitas al bot con `bot` +
-`applications.commands`.
+## Instalación
+
+    pip install -e ".[dev]"
+    cp .env.example .env
+    python -m sorteo_bot
+
+1. Crear la aplicación en https://discord.com/developers/applications
+2. Activar los intents `Members`, `Presence` y `Message Content`.
+3. Invitar al bot con los scopes `bot` y `applications.commands`.
+4. Definir `DISCORD_TOKEN` en `.env`.
 
 Con Docker:
 
-```bash
-docker build -t sorteo-bot .
-docker run --env-file .env -v ./data:/app/data sorteo-bot
-```
+    docker build -t sorteo-bot .
+    docker run --env-file .env -v ./data:/app/data sorteo-bot
 
-Variables que uso (ver `.env.example`): `DISCORD_TOKEN`, `COMMAND_PREFIX` (!),
-`VOICE_CHANNEL_SORTEO` (Sorteo), `VOICE_CHANNEL_EVENTO` (Evento),
-`SQLITE_PATH` (data/sorteo.db), `FUZZY_THRESHOLD` (70).
+Variables de entorno (ver `.env.example`): `DISCORD_TOKEN`, `COMMAND_PREFIX`, `VOICE_CHANNEL_SORTEO`, `VOICE_CHANNEL_EVENTO`, `SQLITE_PATH`, `FUZZY_THRESHOLD`.
 
-## Cómo está organizado
+## Estructura
 
-```
-src/sorteo_bot/
-  bot.py, main.py      # arranque
-  config.py            # settings con pydantic
-  domain/              # draw.py y modelos, sin discord ni disco
-  services/            # resolver de nombres
-  infrastructure/      # sqlite
-  cogs/                # los comandos, en tres grupos
-tests/
-```
+    src/sorteo_bot/
+      bot.py, main.py
+      config.py
+      domain/
+      services/
+      infrastructure/
+      cogs/
+    tests/
 
-Separé el cálculo del sorteo (`choose_weighted_winner`) para poder testearlo
-sin montar Discord, y la persistencia va detrás de un Protocol así que en los
-tests uso un fake en memoria. Los cogs son finos a posta: validan, llaman al
-store y responden.
+- Cálculo del sorteo en `choose_weighted_winner`, sin dependencias de Discord.
+- Persistencia definida por `Protocol`. En tests se usa implementación en memoria.
+- Los cogs validan la entrada, acceden al store y devuelven la respuesta.
 
 ## Calidad
 
-```bash
-pytest            # 39 tests, pide 80% de cobertura
-ruff check src tests && ruff format --check src tests
-mypy src/sorteo_bot   # strict
-```
+    pytest
+    ruff check src tests && ruff format --check src tests
+    mypy src/sorteo_bot
 
-Hay workflow de GitHub Actions con python 3.11 a 3.13 que pasa esas tres cosas.
+Cobertura mínima exigida: 80%. CI con GitHub Actions en Python 3.11 a 3.13.
 
 ## Pendiente
 
-- Programar sorteos y que haya varios premios por noche.
-- Probarlo con Postgres cuando el SQLite se quede corto.
-- Guardar un historial de ganadores para auditar.
+- Programación de sorteos y múltiples premios por noche.
+- Evaluación de Postgres cuando SQLite sea insuficiente.
+- Historial de ganadores para auditoría.
 
-MIT.
+Licencia: MIT.
